@@ -98,7 +98,10 @@ def simulate(mconf, batch_dict, net, sim_method, output_div=False):
     if 'density' in batch_dict:
         if buoyancyScale > 0:
             # Add external forces: buoyancy.
-            gravity = torch.FloatTensor(3).fill_(0).cuda()
+            if torch.cuda.is_available():
+                gravity = torch.FloatTensor(3).fill_(0).cuda()
+            else:
+                gravity = torch.FloatTensor(3).fill_(0)
             gravity[0] = mconf['gravityVec']['x']
             gravity[1] = mconf['gravityVec']['y']
             gravity[2] = mconf['gravityVec']['z']
@@ -106,7 +109,10 @@ def simulate(mconf, batch_dict, net, sim_method, output_div=False):
             rho_star = mconf['operatingDensity']
             U = fluid.addBuoyancy(U, flags, density, gravity, rho_star, dt)
         if gravityScale > 0:
-            gravity = torch.FloatTensor(3).fill_(0).cuda()
+            if torch.cuda.is_available():
+                gravity = torch.FloatTensor(3).fill_(0).cuda()
+            else:
+                gravity = torch.FloatTensor(3).fill_(0)
             gravity[0] = mconf['gravityVec']['x']
             gravity[1] = mconf['gravityVec']['y']
             gravity[2] = mconf['gravityVec']['z']

@@ -40,7 +40,7 @@ def setWallBcsStick(U, flags, flags_stick):
     idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=cuda) \
                 .view(bsz, 1, 1, 1).expand(bsz,d,h,w)
 
-    mCont = torch.ones_like(zeroBy)
+    mCont = torch.ones_like(zeroBy).type(torch.bool)
 
     cur_fluid = flags.eq(CellType.TypeFluid).squeeze(1)
     cur_obs = flags.eq(CellType.TypeObstacle).squeeze(1)
@@ -51,7 +51,7 @@ def setWallBcsStick(U, flags, flags_stick):
     mNotCells = cur_fluid.ne(1).__and__\
                 (cur_obs.ne(1)).__and__\
                 (cur_stick.ne(1))
-    mCont.masked_fill_(mNotCells, 0)
+    mCont.masked_fill_(mNotCells, False)
 
     # First, set all velocities INSIDE obstacles to zero.
     U.masked_fill_(cur_obs.unsqueeze(1), 0)

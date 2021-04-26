@@ -11,7 +11,7 @@ def createPlumeBCs(batch_dict, density_val, u_scale, rad):
         rad (float): radius of inlet circle (centered around midpoint of wall)
     """
 
-    cuda = torch.device('cuda')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # batch_dict at input: {p, UDiv, flags, density}
     assert len(batch_dict) == 4, "Batch must contain 4 tensors (p, UDiv, flags, density)"
     UDiv = batch_dict['U']
@@ -38,17 +38,17 @@ def createPlumeBCs(batch_dict, density_val, u_scale, rad):
 
     y = 1
     if (not is3D):
-        vec = torch.arange(0,2, device=cuda)
+        vec = torch.arange(0,2, device=device)
     else:
-        vec = torch.arange(0,3, device=cuda)
+        vec = torch.arange(0,3, device=device)
         vec[2] = 0
 
     vec.mul_(u_scale)
 
-    index_x = torch.arange(0, xdim, device=cuda).view(xdim).expand_as(density[0][0])
-    index_y = torch.arange(0, ydim, device=cuda).view(ydim, 1).expand_as(density[0][0])
+    index_x = torch.arange(0, xdim, device=device).view(xdim).expand_as(density[0][0])
+    index_y = torch.arange(0, ydim, device=device).view(ydim, 1).expand_as(density[0][0])
     if (is3D):
-        index_z = torch.arange(0, zdim, device=cuda).view(zdim, 1, 1).expand_as(density[0][0])
+        index_z = torch.arange(0, zdim, device=device).view(zdim, 1, 1).expand_as(density[0][0])
 
     if (not is3D):
         index_ten = torch.stack((index_x, index_y), dim=0)
@@ -96,7 +96,7 @@ def createRayleighTaylorBCs(batch_dict, mconf, rho1, rho2):
         rho2 (float): Lower fluid density.
     """
 
-    cuda = torch.device('cuda')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # batch_dict at input: {p, UDiv, flags, density}
     assert len(batch_dict) == 4, "Batch must contain 4 tensors (p, UDiv, flags, density)"
     UDiv = batch_dict['U']
@@ -109,8 +109,8 @@ def createRayleighTaylorBCs(batch_dict, mconf, rho1, rho2):
     # Upper layer rho2, vel = 0
     # Lower layer rho1, vel = 0
 
-    X = torch.arange(0, resX, device=cuda).view(resX).expand((1,resY,resX))
-    Y = torch.arange(0, resY, device=cuda).view(resY, 1).expand((1,resY,resX))
+    X = torch.arange(0, resX, device=device).view(resX).expand((1,resY,resX))
+    Y = torch.arange(0, resY, device=device).view(resY, 1).expand((1,resY,resX))
     coord = torch.cat((X,Y), dim=0).unsqueeze(0).unsqueeze(2)
 
     # Atwood number

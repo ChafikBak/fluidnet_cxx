@@ -53,7 +53,7 @@ T isBlockedCell(const T& pos, const T& flags) {
                              // we operate with mask so that we don't take those into
                              // account,
  
-  T ret = at::zeros_like(flags).toType(at::kByte);
+  T ret = at::zeros_like(flags).toType(at::kBool);
   // ret is false by default. Only operate on cells that are INSIDE the domain, 
   // using the complentary of isOut.
   // Set ret to true when cells are obstacles.
@@ -260,7 +260,7 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
                 T& new_pos, const bool do_line_trace){
 
   T maskRet = at::zeros_like(flags).toType(at::kByte);
-  T mCont = at::ones_like(flags).toType(at::kByte);
+  T mCont = at::ones_like(flags).toType(at::kBool);
   if (!do_line_trace) {
     new_pos = pos + delta;
     return;  //return maskRet;
@@ -268,17 +268,17 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
 
   // If we are ALREADY outside the domain, don't go further (mask continue = false)
   T isOut = isOutOfDomain(pos, flags);
-  mCont.masked_fill_(isOut, 0);
+  mCont.masked_fill_(isOut, false);
   
   // If we are ALREADY in an obstacle segment, don't go further (mask continue = false)
   T isBlocked = isBlockedCell(pos, flags);
-  mCont.masked_fill_(isBlocked, 0);
+  mCont.masked_fill_(isBlocked, false);
   new_pos = pos.clone();
   const T length = delta.norm(2, 1, true); // L2 norm in dimension 1 keeping dimension.
 
   // We are not being asked to step anywhere. Set mask continue to false.
   T infToEps = (length <= epsilon).__and__(mCont);
-  mCont.masked_fill_(infToEps, 0);
+  mCont.masked_fill_(infToEps, false);
   // The rest of cells are the ones having a true mask in mCont.
   // We will perform the ops on those cells. 
   // The rest of the cells are stopped, i.e mCont is false.
@@ -308,7 +308,7 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
   // the point encountered an obstacle, false otherwise.
   while (!mCont.equal(zeros_like(mCont))) {
     T reachedLength = (cur_length >= length - hit_margin).__and__(mCont);
-    mCont.masked_fill_(reachedLength, 0);
+    mCont.masked_fill_(reachedLength, false);
     if (mCont.equal(zeros_like(mCont))) {
       break;
     }
@@ -353,7 +353,7 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
       // Change continue to false.
       new_pos.masked_scatter_(isAgainstBorder, ipos.masked_select(isAgainstBorder)); 
 
-      mCont.masked_fill_(isAgainstBorder, 0);
+      mCont.masked_fill_(isAgainstBorder, false);
 
       // We hit the border boundary, but we entered a blocked cell.
       // Continue on to case 2. 
@@ -394,7 +394,7 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
        T ipos;
        T hit = calcRayBoxIntersection(new_pos, dt, next_pos_ctr,
                                       hit_margin, countMask, ipos);
-       mCont.masked_fill_(hit.eq(0).__and__(countMask), 0);
+       mCont.masked_fill_(hit.eq(0).__and__(countMask), false);
        countMask.masked_fill_(hit.eq(0).__and__(countMask), 0);
 
        next_pos.masked_scatter_(hit.__and__(countMask),
@@ -407,7 +407,7 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
                             next_pos.masked_select(mBlock.__and__(mCont)));
 
     // Change continue to false.
-    mCont.masked_fill_(mBlock.__and__(mCont), 0);
+    mCont.masked_fill_(mBlock.__and__(mCont), false);
 
     } 
  
@@ -417,7 +417,7 @@ void calcLineTrace(const T& pos, const T& delta, const T& flags,
   
   //Check if cur_length < length - hit_margin. Otherwise, set continue to false.
   reachedLength = (cur_length >= length - hit_margin).__and__(mCont);
-  mCont.masked_fill_(reachedLength, 0);
+  mCont.masked_fill_(reachedLength, false);
     
   }
   return;

@@ -84,7 +84,7 @@ void interpol1DWithFluid(
   T m0 = is_fluid_a.eq(0).__and__(is_fluid_b.eq(0));
   T m1 = is_fluid_a.eq(0).__and__(m0.eq(0));
   T m2 = is_fluid_b.eq(0).__and__(m1.eq(0)).__and__(m0.eq(0));
-  T m3 = 1 - (m0.__or__(m1).__or__(m2));
+  T m3 = ~ (m0.__or__(m1).__or__(m2));
 
   val_ab = zeros_like(val_a);
   val_ab.masked_fill_(m0, 0);
@@ -104,7 +104,7 @@ void interpol1DWithFluidTest(
   T m0 = is_fluid_a.eq(0).__and__(is_fluid_b.eq(0));
   T m1 = is_fluid_a.eq(0).__and__(m0.eq(0));
   T m2 = is_fluid_b.eq(0).__and__(m1.eq(0)).__and__(m0.eq(0));
-  T m3 = 1 - (m0.__or__(m1).__or__(m2));
+  T m3 = ~ (m0.__or__(m1).__or__(m2));
 
   val_ab = zeros_like(val_a);
   val_ab.masked_fill_(m0, 0);

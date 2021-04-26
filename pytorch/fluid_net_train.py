@@ -101,8 +101,8 @@ if (conf['preprocOriginalFluidNetDataOnly']):
     print('Running preprocessing only')
     resume = False
 
-print('Active CUDA Device: GPU', torch.cuda.current_device())
-cuda0 = torch.device('cuda:0')
+#print('Active CUDA Device: GPU', torch.cuda.current_device())
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # Define training and test datasets
 tr = lib.FluidNetDataset(conf, 'tr', save_dt=4, resume=resume)
@@ -125,7 +125,6 @@ save_or_show = output_mode == 'save'
 lr = arguments.lr or mconf['lr']
 
 #******************************** Restarting training ***************************
-
 if resume:
     print()
     print('            RESTARTING TRAINING            ')
@@ -297,14 +296,14 @@ try:
                 # rand(1) is an uniform dist on the interval [0,1)
                 if torch.rand(1)[0] < mconf['trainBuoyancyProb']:
                     # Add buoyancy to this batch (only in the long term frames)
-                    var = torch.tensor([1.], device=cuda0)
+                    var = torch.tensor([1.], device=device)
                     mconf['buoyancyScale'] = torch.normal(mconf['trainBuoyancyScale'], var)
 
                 oldGravityScale = mconf['gravityScale']
                 # rand(1) is an uniform dist on the interval [0,1)
                 if torch.rand(1)[0] < mconf['trainGravityProb']:
                     # Add gravity to this batch (only in the long term frames)
-                    var = torch.tensor([1.], device=cuda0)
+                    var = torch.tensor([1.], device=device)
                     mconf['gravityScale'] = torch.normal(mconf['trainGravityScale'], var)
 
                 oldGravity = mconf['gravityVec']

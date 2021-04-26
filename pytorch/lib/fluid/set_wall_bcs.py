@@ -10,7 +10,7 @@ def setWallBcs(U, flags):
     Output:
         U (Tensor): Output velocity (with enforced BCs).
     """
-    cuda = torch.device('cuda')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     assert (U.dim() == 5 and flags.dim() == 5), 'Dimension mismatch'
     assert flags.size(1) == 1, 'flags is not a scalar'
     bsz = flags.size(0)
@@ -27,27 +27,27 @@ def setWallBcs(U, flags):
         'Size mismatch'
     assert (U.is_contiguous() and flags.is_contiguous()), 'Input is not contiguous'
 
-    i = torch.arange(start=0, end=w, dtype=torch.long, device=cuda) \
+    i = torch.arange(start=0, end=w, dtype=torch.long, device=device) \
             .view(1,w).expand(bsz, d, h, w)
-    j = torch.arange(start=0, end=h, dtype=torch.long, device=cuda) \
+    j = torch.arange(start=0, end=h, dtype=torch.long, device=device) \
             .view(1,h,1).expand(bsz, d, h, w)
     k = torch.zeros_like(i)
     if (is3D):
-        k = torch.arange(start=0, end=d, dtype=torch.long, device=cuda) \
+        k = torch.arange(start=0, end=d, dtype=torch.long, device=device) \
                 .view(1,d,1,1).expand(bsz, d, h, w)
 
     zero = torch.zeros_like(i)
-    zeroBy = torch.zeros(i.size(), dtype=torch.uint8, device=cuda)
+    zeroBy = torch.zeros(i.size(), dtype=torch.uint8, device=device)
 
-    idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=cuda) \
+    idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=device) \
                 .view(bsz, 1, 1, 1).expand(bsz,d,h,w)
 
-    mCont = torch.ones_like(zeroBy)
+    mCont = torch.ones_like(zeroBy).type(torch.bool)
 
     cur_fluid = flags.eq(CellType.TypeFluid).squeeze(1)
     cur_obs = flags.eq(CellType.TypeObstacle).squeeze(1)
     mNotFluidNotObs = cur_fluid.ne(1).__and__(cur_obs.ne(1))
-    mCont.masked_fill_(mNotFluidNotObs, 0)
+    mCont.masked_fill_(mNotFluidNotObs, False)
 
     # The neighbour to the left (i-1,j,k) is an obstacle
     # Set u.n = u_solid.n (slip bc) (direction i)

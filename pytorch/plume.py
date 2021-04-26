@@ -82,7 +82,7 @@ simConf['modelDirname'] = simConf['modelDir'] + '/' + simConf['modelFilename']
 resume = False # For training, at inference set always to false
 
 
-print('Active CUDA Device: GPU', torch.cuda.current_device())
+#print('Active CUDA Device: GPU', torch.cuda.current_device())
 print()
 path = simConf['modelDir']
 path_list = path.split(glob.os.sep)
@@ -109,14 +109,18 @@ try:
     print('==> loading model')
     mpath = glob.os.path.join(simConf['modelDir'], simConf['modelFilename'] + '_lastEpoch_best.pth')
     assert glob.os.path.isfile(mpath), mpath  + ' does not exits!'
-    state = torch.load(mpath)
+    if torch.cuda.is_available():
+        state = torch.load(mpath, map_location='cuda:0')
+    else:
+        state = torch.load(mpath, map_location='cpu')
 
     print('Data loading: done')
 
     #********************************** Create the model ***************************
     with torch.no_grad():
 
-        cuda = torch.device('cuda')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        
 
         net = model_saved.FluidNet(mconf, dropout=False)
         if torch.cuda.is_available():
@@ -129,10 +133,16 @@ try:
         resX = simConf['resX']
         resY = simConf['resY']
 
-        p =       torch.zeros((1,1,1,resY,resX), dtype=torch.float).cuda()
-        U =       torch.zeros((1,2,1,resY,resX), dtype=torch.float).cuda()
-        flags =   torch.zeros((1,1,1,resY,resX), dtype=torch.float).cuda()
-        density = torch.zeros((1,1,1,resY,resX), dtype=torch.float).cuda()
+        if torch.cuda.is_available():
+            p =       torch.zeros((1,1,1,resY,resX), dtype=torch.float).cuda()
+            U =       torch.zeros((1,2,1,resY,resX), dtype=torch.float).cuda()
+            flags =   torch.zeros((1,1,1,resY,resX), dtype=torch.float).cuda()
+            density = torch.zeros((1,1,1,resY,resX), dtype=torch.float).cuda()
+        else:
+            p =       torch.zeros((1,1,1,resY,resX), dtype=torch.float)
+            U =       torch.zeros((1,2,1,resY,resX), dtype=torch.float)
+            flags =   torch.zeros((1,1,1,resY,resX), dtype=torch.float)
+            density = torch.zeros((1,1,1,resY,resX), dtype=torch.float)           
 
         fluid.emptyDomain(flags)
         batch_dict = {}

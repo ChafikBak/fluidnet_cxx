@@ -38,12 +38,12 @@ def setWallBcs(U, flags):
     idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=cuda) \
                 .view(bsz, 1, 1, 1).expand(bsz,d,h,w)
 
-    mCont = torch.ones_like(zeroBy)
+    mCont = torch.ones_like(zeroBy).type(torch.bool)
 
     cur_fluid = flags.eq(TypeFluid).squeeze(1)
     cur_obs = flags.eq(TypeObstacle).squeeze(1)
     mNotFluidNotObs = cur_fluid.ne(1).__and__(cur_obs.ne(1))
-    mCont.masked_fill_(mNotFluidNotObs, 0)
+    mCont.masked_fill_(mNotFluidNotObs, False)
 
     # The neighbour to the left (i-1,j,k) is an obstacle
     # Set u.n = u_solid.n (slip bc) (direction i)

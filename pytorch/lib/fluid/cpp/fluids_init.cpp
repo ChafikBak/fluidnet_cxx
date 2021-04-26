@@ -29,7 +29,7 @@ T SemiLagrangeEulerFluidNet
   T maskSolid = flags.ne(TypeFluid);
   T maskFluid = flags.eq(TypeFluid);
 
-  AT_ASSERTM(maskSolid.equal(1-maskFluid), "Masks are not complementary!");
+  AT_ASSERTM(maskSolid.equal(~maskFluid), "Masks are not complementary!");
   // Don't advect solid geometry. 
   ret.masked_scatter_(maskSolid, src.masked_select(maskSolid));
   
@@ -87,7 +87,7 @@ T SemiLagrangeEulerFluidNetSavePos
   T ret = zeros_like(src);
   T maskSolid = flags.ne(TypeFluid);
   T maskFluid = flags.eq(TypeFluid);
-  AT_ASSERTM(maskSolid.equal(1-maskFluid), "Masks are not complementary!");
+  AT_ASSERTM(maskSolid.equal(~maskFluid), "Masks are not complementary!");
   
   T start_pos = at::zeros({bsz, 3, d, h, w}, options).toType(src.scalar_type());
  
@@ -407,7 +407,7 @@ T SemiLagrangeEulerFluidNetMAC
   T maskSolid = flags.ne(TypeFluid);
   T maskFluid = flags.eq(TypeFluid);
 
-  AT_ASSERTM(maskSolid.equal(1-maskFluid), "Masks are not complementary!");
+  AT_ASSERTM(maskSolid.equal(~maskFluid), "Masks are not complementary!");
 
   // Don't advect solid geometry.
   ret.select(1,0).unsqueeze(1).masked_scatter_(
@@ -476,14 +476,14 @@ T MacCormackCorrectMAC
   skip.masked_fill_(maskSolid, 1);
 
   // This allows to never access negative indexes!
-  T mask0 = zeroBy.where(i<=0, (flags.index({idx_b, zero, k, j, i-1}).ne(TypeFluid)));
+  T mask0 = zeroBy.where(i<=0, (flags.index({idx_b, zero, k, j, i-1}).ne(TypeFluid)).toType(at::kByte)).toType(at::kBool);
   skip.select(1,0).masked_fill_(mask0, 1);
 
-  T mask1 = zeroBy.where(j<=0, (flags.index({idx_b, zero, k, j-1, i}).ne(TypeFluid)));
+  T mask1 = zeroBy.where(j<=0, (flags.index({idx_b, zero, k, j-1, i}).ne(TypeFluid)).toType(at::kByte)).toType(at::kBool);
   skip.select(1,1).masked_fill_(mask1, 1);
 
   if (is3D) {
-    T mask2 = zeroBy.where(k<=0, (flags.index({idx_b, zero, k-1, j, i}).ne(TypeFluid)));
+    T mask2 = zeroBy.where(k<=0, (flags.index({idx_b, zero, k-1, j, i}).ne(TypeFluid)).toType(at::kByte)).toType(at::kBool);
     skip.select(1,2).masked_fill_(mask2, 1);
   }
 
@@ -524,7 +524,7 @@ T doClampComponentMAC
   std::vector<T> positions;
   positions.insert(positions.end(), (pos - vel).toType(at::kInt));
   positions.insert(positions.end(), (pos + vel).toType(at::kInt));
-  T maskRet = ones_like(flags).toType(at::kByte);
+  T maskRet = ones_like(flags).toType(at::kByte).toType(at::kBool);
 
   for (int l = 0; l < 2; ++l) {
     T curr_pos = positions[l];
@@ -570,7 +570,7 @@ T doClampComponentMAC
     T InBounds = NotInBounds.ne(1);
 
     ret.masked_scatter_(NotInBounds, fwd.masked_select(NotInBounds));
-    maskRet.masked_fill_(NotInBounds, 0);
+    maskRet.masked_fill_(NotInBounds, false);
     
     // find min/max around source position
     T orig000 = orig.index({idx_b, c, k0, j0, i0}).unsqueeze(1);

@@ -10,7 +10,7 @@ def emptyDomain(flags, boundary_width = 1):
         boundary_width (int, optional): Set width of border wall. Default set to 1.
     """
 
-    cuda = torch.device('cuda')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     assert boundary_width > 0, 'Boundary width must be greater than zero!'
     assert flags.dim() == 5, 'Flags tensor should be 5D'
     assert flags.size(1) == 1, 'Flags should have only one channels (scalar field)'
@@ -25,10 +25,10 @@ def emptyDomain(flags, boundary_width = 1):
     zdim  = flags.size(2)
     bnd = boundary_width
 
-    index_x = torch.arange(0, xdim, device=cuda).view(xdim).expand_as(flags[0][0])
-    index_y = torch.arange(0, ydim, device=cuda).view(ydim, 1).expand_as(flags[0][0])
+    index_x = torch.arange(0, xdim, device=device).view(xdim).expand_as(flags[0][0])
+    index_y = torch.arange(0, ydim, device=device).view(ydim, 1).expand_as(flags[0][0])
     if (is3D):
-        index_z = torch.arange(0, zdim, device=cuda).view(zdim, 1 , 1).expand_as(flags[0][0])
+        index_z = torch.arange(0, zdim, device=device).view(zdim, 1 , 1).expand_as(flags[0][0])
 
     if (not is3D):
         index_ten = torch.stack((index_x, index_y), dim=0)

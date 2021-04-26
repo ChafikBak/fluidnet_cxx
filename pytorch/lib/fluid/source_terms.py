@@ -14,7 +14,7 @@ def addBuoyancy(U, flags, density, gravity, rho_star, dt):
     Output:
         U (Tensor): Output velocity
     """
-    cuda = torch.device('cuda')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # Argument check
     assert U.dim() == 5 and flags.dim() == 5 and density.dim() == 5,\
         "Dimension mismatch"
@@ -46,17 +46,20 @@ def addBuoyancy(U, flags, density, gravity, rho_star, dt):
     # dx = 1.
     strength = gravity * dt
 
-    i = torch.arange(0, w, dtype=torch.long, device=cuda).view(1,w).expand(bsz, d, h, w)
-    j = torch.arange(0, h, dtype=torch.long, device=cuda).view(1,h,1).expand(bsz, d, h, w)
+    i = torch.arange(0, w, dtype=torch.long, device=device).view(1,w).expand(bsz, d, h, w)
+    j = torch.arange(0, h, dtype=torch.long, device=device).view(1,h,1).expand(bsz, d, h, w)
     k = torch.zeros_like(i)
     if (is3D):
-        k = torch.arange(0, d, dtype=torch.long, device=cuda).view(1,d,1,1).expand(bsz, d, h, w)
+        k = torch.arange(0, d, dtype=torch.long, device=device).view(1,d,1,1).expand(bsz, d, h, w)
 
     zero = torch.zeros_like(i)
-    zeroBy = torch.zeros(i.size(), dtype=torch.uint8, device=cuda)
-    zero_f = zero.cuda().float()
+    zeroBy = torch.zeros(i.size(), dtype=torch.uint8, device=device)
+    if torch.cuda.is_available():
+        zero_f = zero.cuda().float()
+    else:
+        zero_f = zero.float()
 
-    idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=cuda) \
+    idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=device) \
                             .view(bsz, 1, 1, 1).expand(bsz,d,h,w)
 
     maskBorder = (i < bnd).__or__\
@@ -70,11 +73,11 @@ def addBuoyancy(U, flags, density, gravity, rho_star, dt):
     maskBorder = maskBorder.unsqueeze(1)
 
     # No buoyancy on the border. Set continue (mCont) to false.
-    mCont = torch.ones_like(zeroBy).unsqueeze(1)
-    mCont.masked_fill_(maskBorder, 0)
+    mCont = torch.ones_like(zeroBy).unsqueeze(1).type(torch.bool)
+    mCont.masked_fill_(maskBorder, False)
 
     isFluid = flags.eq(CellType.TypeFluid).__and__(mCont)
-    mCont.masked_fill_(isFluid.ne(1), 0)
+    mCont.masked_fill_(isFluid.ne(1), False)
     mCont.squeeze_(1)
 
     max_X = torch.zeros_like(zero).fill_(w-1)
@@ -130,7 +133,7 @@ def addGravity(U, flags, gravity, dt):
     Output:
         U (Tensor): Output velocity
     """
-    cuda = torch.device('cuda')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     # Argument check
     assert U.dim() == 5 and flags.dim() == 5, "Dimension mismatch"
     assert flags.size(1) == 1, "flags is not scalar"
@@ -158,17 +161,17 @@ def addGravity(U, flags, gravity, dt):
     # dx = 1.
     force = gravity * dt
 
-    i = torch.arange(0, w, dtype=torch.long, device=cuda).view(1,w).expand(bsz, d, h, w)
-    j = torch.arange(0, h, dtype=torch.long, device=cuda).view(1,h,1).expand(bsz, d, h, w)
+    i = torch.arange(0, w, dtype=torch.long, device=device).view(1,w).expand(bsz, d, h, w)
+    j = torch.arange(0, h, dtype=torch.long, device=device).view(1,h,1).expand(bsz, d, h, w)
     k = torch.zeros_like(i)
     if (is3D):
-        k = torch.arange(0, d, dtype=torch.long, device=cuda).view(1,d,1,1).expand(bsz, d, h, w)
+        k = torch.arange(0, d, dtype=torch.long, device=device).view(1,d,1,1).expand(bsz, d, h, w)
 
     zero = torch.zeros_like(i)
-    zeroBy = torch.zeros(i.size(), dtype=torch.uint8, device=cuda)
+    zeroBy = torch.zeros(i.size(), dtype=torch.uint8, device=device)
     zero_f = zero.float()
 
-    idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=cuda) \
+    idx_b = torch.arange(start=0, end=bsz, dtype=torch.long, device=device) \
                             .view(bsz, 1, 1, 1).expand(bsz,d,h,w)
 
     maskBorder = (i < bnd).__or__\
@@ -181,14 +184,14 @@ def addGravity(U, flags, gravity, dt):
     maskBorder = maskBorder.unsqueeze(1)
 
     # No buoyancy on the border. Set continue (mCont) to false.
-    mCont = torch.ones_like(zeroBy).unsqueeze(1)
-    mCont.masked_fill_(maskBorder, 0)
+    mCont = torch.ones_like(zeroBy).unsqueeze(1).type(torch.bool)
+    mCont.masked_fill_(maskBorder, False)
 
     cur_fluid = flags.eq(CellType.TypeFluid).__and__(mCont)
     cur_empty = flags.eq(CellType.TypeEmpty).__and__(mCont)
 
     mNotFluidNotEmpt = cur_fluid.ne(1).__and__(cur_empty.ne(1))
-    mCont.masked_fill_(mNotFluidNotEmpt, 0)
+    mCont.masked_fill_(mNotFluidNotEmpt, False)
 
     mCont.squeeze_(1)
     #print()

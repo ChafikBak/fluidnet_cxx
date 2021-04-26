@@ -75,11 +75,11 @@ def addBuoyancy(U, flags, density, gravity, dt):
     maskBorder = maskBorder.unsqueeze(1)
 
     # No buoyancy on the border. Set continue (mCont) to false.
-    mCont = torch.ones_like(zeroBy).unsqueeze(1)
-    mCont.masked_fill_(maskBorder, 0)
+    mCont = torch.ones_like(zeroBy).unsqueeze(1).type(torch.bool)
+    mCont.masked_fill_(maskBorder, False)
 
     isFluid = flags.eq(TypeFluid).__and__(mCont)
-    mCont.masked_fill_(isFluid.ne(1), 0)
+    mCont.masked_fill_(isFluid.ne(1), False)
     mCont.squeeze_(1)
 
     fluid100 = zeroBy.where( i <= 0, (flags[idx_b, zero, k, j, i-1].eq(TypeFluid))).__and__(mCont)
@@ -170,14 +170,14 @@ def addGravity(U, flags, gravity, dt):
     maskBorder = maskBorder.unsqueeze(1)
 
     # No buoyancy on the border. Set continue (mCont) to false.
-    mCont = torch.ones_like(zeroBy).unsqueeze(1)
-    mCont.masked_fill_(maskBorder, 0)
+    mCont = torch.ones_like(zeroBy).unsqueeze(1).type(torch.bool)
+    mCont.masked_fill_(maskBorder, False)
 
     cur_fluid = flags.eq(TypeFluid).__and__(mCont)
     cur_empty = flags.eq(TypeEmpty).__and__(mCont)
 
     mNotFluidNotEmpt = cur_fluid.ne(1).__and__(cur_empty.ne(1))
-    mCont.masked_fill_(mNotFluidNotEmpt, 0)
+    mCont.masked_fill_(mNotFluidNotEmpt, False)
 
     mCont.squeeze_(1)
 
